@@ -19,11 +19,11 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
+import json
 import os
 import re
 import socket
 import struct
-
 from subprocess import check_output
 
 HDHR_NAME = 'HDHR'
@@ -36,7 +36,7 @@ raw_network_scan = [
 ]
 network_scan = [dict(zip(['NAME', 'LAN_IP', 'MAC_ADDRESS'], i)) for i in raw_network_scan]
 network_scan = [{**i, **{'LAN_IP':i['LAN_IP'][1:-1]}} for i in network_scan]
-print(f'network_scan: {network_scan}')
+print(f'network_scan: {json.dumps(network_scan, indent=4, sort_keys=True)}')  # pretty print
 
 hdhr_ip = None
 for network_peer in network_scan:
@@ -68,14 +68,12 @@ sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 while True:
     data, requestor = sock.recvfrom(1024)
     print(f'got query from {requestor}')
-    # forward query to HDHR
-    hdhr_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    hdhr_sock.bind((wifi_ip, FWD_UDP_PORT))
     print('forwarding to HDHR')
-    hdhr_sock.sendto(data, (hdhr_ip, DEVICE_DISCOVERY_PORT))
-    hdhr_reply_data, (hdhr_addr, hdhr_port) = hdhr_sock.recvfrom(1024)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as hdhr_sock:
+        hdhr_sock.bind((wifi_ip, FWD_UDP_PORT))
+        hdhr_sock.sendto(data, (hdhr_ip, DEVICE_DISCOVERY_PORT))
+        hdhr_reply_data, (hdhr_addr, hdhr_port) = hdhr_sock.recvfrom(1024)
     print(f'HDHR reply from {hdhr_addr}:{hdhr_port}')
     print('forwarding HDHR reply to original requestor')
     sock.sendto(hdhr_reply_data, requestor)
-    hdhr_sock.close()
 
