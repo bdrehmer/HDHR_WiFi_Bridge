@@ -39,7 +39,7 @@ while (not wifi_ip) or (not hdhr_ip):
         print(f'found WiFi IP: {wifi_ip}')
     else:
         print('did not find WiFi IP')
-        sleep(0.1)
+        sleep(0.5)
         continue
 
     raw_network_scan = [
@@ -55,7 +55,7 @@ while (not wifi_ip) or (not hdhr_ip):
             break
     if not hdhr_ip:
         print('could not find HDHR')
-        sleep(0.1)
+        sleep(0.5)
 
 MCAST_GRP = '224.1.1.1'   # multi-cast group (don't modify)
 MCAST_PORT = DEVICE_DISCOVERY_PORT
