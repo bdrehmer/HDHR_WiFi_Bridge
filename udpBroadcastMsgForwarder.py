@@ -25,29 +25,37 @@ import re
 import socket
 import struct
 from subprocess import check_output
+from time import sleep
 
 HDHR_NAME = 'HDHR'
 DEVICE_DISCOVERY_PORT = 65001
-wifi_ip = check_output(["hostname", "-I"]).decode("utf-8").split(" ")[0]
-print(f'found WiFi IP: {wifi_ip}')
 FWD_UDP_PORT = 65002
-raw_network_scan = [
-  re.findall('^[\w\?\.]+|(?<=\s)\([\d\.]+\)|(?<=at\s)[\w\:]+', i) for i in os.popen('arp -a')
-]
-network_scan = [dict(zip(['NAME', 'LAN_IP', 'MAC_ADDRESS'], i)) for i in raw_network_scan]
-network_scan = [{**i, **{'LAN_IP':i['LAN_IP'][1:-1]}} for i in network_scan]
-print(f'network_scan: {json.dumps(network_scan, indent=4, sort_keys=True)}')  # pretty print
 
+wifi_ip = None
 hdhr_ip = None
-for network_peer in network_scan:
-    if network_peer['NAME'] == HDHR_NAME:
-        hdhr_ip = network_peer['LAN_IP']
-        print(f'found {HDHR_NAME} IP: {hdhr_ip}')
-        break
+while (not wifi_ip) or (not hdhr_ip):
+    wifi_ip = check_output(["hostname", "-I"]).decode("utf-8").split(" ")[0]
+    if wifi_ip:
+        print(f'found WiFi IP: {wifi_ip}')
+    else:
+        print('did not find WiFi IP')
+        sleep(0.1)
+        continue
 
-if not hdhr_ip:
-    print('could not find HDHR')
-    exit()
+    raw_network_scan = [
+      re.findall('^[\w\?\.]+|(?<=\s)\([\d\.]+\)|(?<=at\s)[\w\:]+', i) for i in os.popen('arp -a')
+    ]
+    network_scan = [dict(zip(['NAME', 'LAN_IP', 'MAC_ADDRESS'], i)) for i in raw_network_scan]
+    network_scan = [{**i, **{'LAN_IP':i['LAN_IP'][1:-1]}} for i in network_scan]
+    print(f'network_scan: {json.dumps(network_scan, indent=4, sort_keys=True)}')  # pretty print
+    for network_peer in network_scan:
+        if network_peer['NAME'] == HDHR_NAME:
+            hdhr_ip = network_peer['LAN_IP']
+            print(f'found {HDHR_NAME} IP: {hdhr_ip}')
+            break
+    if not hdhr_ip:
+        print('could not find HDHR')
+        sleep(0.1)
 
 MCAST_GRP = '224.1.1.1'   # multi-cast group (don't modify)
 MCAST_PORT = DEVICE_DISCOVERY_PORT
